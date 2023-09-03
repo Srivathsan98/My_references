@@ -3,7 +3,7 @@
 This playlist contains complete jist on RTOS by Digikey
 
 2. Baremtal - Youtube
-   YouTube: https://www.youtube.com/playlist?list=PLERTijJOmYrDiiWd10iRHY0VRHdJwUH4g
+   Baremtal: https://www.youtube.com/playlist?list=PLERTijJOmYrDiiWd10iRHY0VRHdJwUH4g
 This playlist contains complete jist on Baremetal by Fastbit.
 
 3. Baremetal - Youtube (2)
