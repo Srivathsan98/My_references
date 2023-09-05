@@ -24,7 +24,7 @@ Docs for roadmap and resourcews
   2. Roadmap to embedded engineering - /home/Downloads/
   3. How to learn embedded systems - E\EMbedded\Howtolearn
   4. Awesome embedded master - E\EMbedded\books\Awemsome - for resources
-  5. 
+  5. tutorials master - E\EMbedded\books\tutorialmaster
 
 
 HTML
