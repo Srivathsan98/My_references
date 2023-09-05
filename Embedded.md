@@ -19,3 +19,16 @@ List of websites to look at
   7. Embedded System Design - Embedded Systems Foundations of Cyber-Physical Systems, and the Internet of Things
   8. 
   
+Docs for roadmap and resourcews
+  1. embedded roadmap required skills - /home/
+  2. Roadmap to embedded engineering - /home/Downloads/
+  3. How to learn embedded systems - E\EMbedded\Howtolearn
+  4. Awesome embedded master - E\EMbedded\books\Awemsome - for resources
+  5. 
+
+
+HTML
+Dive into systems
+FLink and blink
+docs yocto project
+arch of open sourvce application
