@@ -23,3 +23,5 @@ go thorugh all the roadmap amd other tips docs adn create a structure of it.
 also add the materials for the components and other docs as well.
 
 
+Link to GitHub Page
+https://srivathsan98.github.io/My_references/Resource-Manager-Dashboard.html
