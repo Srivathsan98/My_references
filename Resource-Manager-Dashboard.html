@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Engineering Focus Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f7f4; color: #1a1a1a; padding: 24px; }
+  .top-bar { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 20px; }
+  .sel-wrap { display: flex; flex-direction: column; gap: 4px; }
+  .sel-label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: .05em; }
+  select { min-width: 180px; font-size: 13px; padding: 7px 10px; border: 1px solid #e0ddd7; border-radius: 8px; background: #fff; cursor: pointer; }
+  button.reset { font-size: 12px; padding: 7px 14px; border: 1px solid #e0ddd7; border-radius: 8px; background: #fff; cursor: pointer; color: #666; }
+  button.reset:hover { background: #f0ede8; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; }
+  .card { background: #fff; border: 1px solid #e8e5df; border-radius: 12px; padding: 14px 16px; cursor: pointer; transition: box-shadow .15s, transform .1s; }
+  .card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.08); transform: translateY(-1px); }
+  .card-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .card-meta { font-size: 11px; color: #888; margin-bottom: 6px; }
+  .bar { height: 4px; background: #e8e5df; border-radius: 2px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; transition: width .4s; }
+  .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .detail-title { font-size: 17px; font-weight: 600; }
+  .badge { font-size: 11px; padding: 3px 10px; border-radius: 999px; font-weight: 600; }
+  .master-bar { height: 6px; background: #e8e5df; border-radius: 3px; overflow: hidden; margin-bottom: 20px; }
+  .master-fill { height: 100%; border-radius: 3px; transition: width .5s; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  @media(max-width:540px){ .two-col { grid-template-columns: 1fr; } }
+  .info-card { background: #fff; border: 1px solid #e8e5df; border-radius: 12px; padding: 14px 16px; }
+  .info-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
+  .item { display: flex; align-items: flex-start; gap: 8px; padding: 5px 0; border-bottom: 1px solid #f0ede8; font-size: 13px; line-height: 1.4; }
+  .item:last-child { border-bottom: none; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+  .actions-card { background: #fafaf8; border: 1px solid #e8e5df; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+  .action-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid #f0ede8; font-size: 13px; }
+  .action-row:last-child { border-bottom: none; }
+  .action-num { font-size: 11px; font-weight: 700; color: #aaa; width: 18px; flex-shrink: 0; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-pill { font-size: 12px; padding: 6px 14px; border-radius: 999px; border: 1px solid; cursor: pointer; font-weight: 500; background: #fff; transition: opacity .15s; }
+  .btn-pill:hover { opacity: .75; }
+  .section-head { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #444; }
+  .mastery-label { font-size: 11px; color: #888; margin-bottom: 1rem; }
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div class="sel-wrap">
+    <span class="sel-label">Domain</span>
+    <select id="domSel" onchange="onDomain()">
+      <option value="">All domains</option>
+      <option value="linux">Linux</option>
+      <option value="embedded">Embedded Linux</option>
+      <option value="drivers">Device Drivers</option>
+      <option value="os">OS Concepts</option>
+      <option value="protocols">Protocols</option>
+      <option value="c">C</option>
+      <option value="cpp">C++</option>
+      <option value="rust">Rust</option>
+      <option value="qt">Qt & HMI</option>
+      <option value="nvidia">NVIDIA / CUDA</option>
+      <option value="gpu">GPU</option>
+      <option value="multimedia">Multimedia</option>
+      <option value="ros2">ROS2</option>
+      <option value="robotics">Robotics</option>
+      <option value="ai">AI / Vision</option>
+      <option value="automotive">Automotive</option>
+      <option value="networking">Networking</option>
+      <option value="security">Security</option>
+      <option value="hardware">Hardware Platforms</option>
+    </select>
+  </div>
+  <div class="sel-wrap">
+    <span class="sel-label">Topic</span>
+    <select id="topicSel" onchange="onTopic()" disabled>
+      <option value="">Select domain first</option>
+    </select>
+  </div>
+  <button class="reset" onclick="reset()">Reset</button>
+</div>
+<div id="content"></div>
+
+<script>
+const DB = {
+  linux:{ label:"Linux", color:"#378ADD",
+    topics:{
+      "Process management":{ mastery:55, subtopics:["fork/exec/wait lifecycle","Process states & /proc","Signals: SIGKILL, SIGTERM, SIGCHLD","Namespaces: PID, mount, net, user","cgroups v1 and v2","ulimit and resource limits"], actions:["Write a process monitor using /proc","Implement a graceful shutdown signal handler","Experiment with unshare for namespace isolation"], gaps:["Deep cgroup v2 resource management","Namespace interactions with containers"] },
+      "Memory management":{ mastery:40, subtopics:["Virtual address space layout","Page tables and TLB","mmap, mprotect, mlock","Huge pages (THP, hugetlbfs)","OOM killer behavior","/proc/meminfo internals"], actions:["Trace a page fault with perf","Write a mmap-based IPC program","Read /proc/pid/maps for a running process"], gaps:["NUMA-aware allocation","Huge page tuning for production"] },
+      "Kernel internals":{ mastery:30, subtopics:["Interrupt handling: IRQ, softirqs, tasklets","Memory allocators: slab/slub/kmalloc","Synchronization: spinlocks, RCU, mutexes","Kernel linked lists and red-black trees","/sys, /proc, debugfs interfaces","System call mechanism"], actions:["Read a kernel subsystem in Elixir (LXR)","Write a minimal loadable kernel module","Trace function calls with ftrace"], gaps:["RCU deep understanding","Lock-free data structures in kernel","Memory barrier semantics"] },
+      "Performance & eBPF":{ mastery:25, subtopics:["perf: record, stat, report, top","ftrace: function and event tracers","bpftrace one-liners","BCC tools: execsnoop, biolatency","Flame graph interpretation"], actions:["Generate a flame graph for a real workload","Write a bpftrace script to trace open() calls","Use perf stat to count cache misses"], gaps:["CO-RE eBPF program development","XDP for network performance","Custom BCC tool development"] }
+    }
+  },
+  embedded:{ label:"Embedded Linux", color:"#639922",
+    topics:{
+      "Yocto Project":{ mastery:35, subtopics:["Layers: meta-*, bbappend, bbclass","BitBake: recipes, DEPENDS, RDEPENDS","MACHINE and DISTRO config","IMAGE_INSTALL and package management","Devtool workflow","Wic image creation","SDK and eSDK generation"], actions:["Build a minimal Yocto image for Raspberry Pi","Write a custom .bb recipe for an app","Create a custom meta- layer","Use devtool to patch an existing recipe"], gaps:["License compliance (SPDX) workflow","sstate cache and hash equivalence","Complex multi-machine build setups"] },
+      "U-Boot":{ mastery:40, subtopics:["Boot sequence: ROM → SPL → U-Boot → Kernel","U-Boot environment variables","FIT image format","Falcon mode (SPL direct boot)","Secure boot with U-Boot","Porting checklist for new hardware"], actions:["Boot a custom kernel via TFTP","Implement a U-Boot A/B boot script","Add a new board target to U-Boot"], gaps:["U-Boot SPL optimization","HSM integration for secure boot","Falcon mode boot time measurement"] },
+      "Device Tree":{ mastery:50, subtopics:["DTS/DTB/DTSI structure","node: compatible, reg, interrupts, clocks","Phandles and references","DTBO overlays for runtime modification","DT bindings: GPIO, I2C, SPI, UART","fdtdump, dtc tools"], actions:["Add a new sensor node to an existing DTS","Write a DTBO overlay for a GPIO expander","Validate DT bindings against upstream schema"], gaps:["Dynamic DT overlay loading at runtime","DT graph for complex CSI camera paths"] },
+      "BSP Development":{ mastery:30, subtopics:["Memory map and DDR initialization","Pin multiplexing (pinctrl subsystem)","Clock tree configuration","Power domain management","i.MX95 SCMI interface","Camera ISP pipeline bring-up"], actions:["Bring up a new peripheral on i.MX95","Validate DDR with stress test tool","Add a pinctrl node for a new interface"], gaps:["Full camera ISP tuning pipeline","Multi-core power domain coordination","HSM/TrustZone integration in BSP"] }
+    }
+  },
+  drivers:{ label:"Device Drivers", color:"#D85A30",
+    topics:{
+      "Character drivers":{ mastery:45, subtopics:["alloc_chrdev_region, cdev_init, cdev_add","struct file_operations: open, read, write, ioctl","Device node: class_create, device_create","Blocking vs non-blocking I/O","poll/select support in drivers","udev rules for automatic nodes"], actions:["Write a complete char driver with ioctl","Implement a FIFO buffer char device","Add poll() support to an existing driver"], gaps:["IOCTL command design patterns","User-kernel zero-copy with mmap"] },
+      "Platform & I2C drivers":{ mastery:40, subtopics:["platform_driver probe/remove cycle","devm_* resource management API","OF match table for DT binding","i2c_driver, i2c_client lifecycle","i2c_smbus_* convenience functions","regmap framework for register access"], actions:["Write an I2C driver for a sensor","Use devm_* for all resource allocation","Port a driver from legacy API to devm_*"], gaps:["i3c bus driver support","regmap cache modes","Complex multi-function device drivers"] },
+      "Interrupts & DMA":{ mastery:30, subtopics:["request_irq, IRQF_SHARED, threaded IRQ","Deferred work: tasklets, workqueues","NAPI for network drivers","DMA: dma_alloc_coherent, scatter-gather","DMA engine framework","Cache coherency with DMA"], actions:["Implement a threaded IRQ handler","Write a DMA transfer using dma_engine_*","Measure interrupt latency with ftrace"], gaps:["DMA from userspace (VFIO)","Real-time interrupt latency tuning","Custom DMA channel reservation"] }
+    }
+  },
+  os:{ label:"OS Concepts", color:"#7F77DD",
+    topics:{
+      "Scheduling":{ mastery:50, subtopics:["CFS: vruntime, load balancing","Real-time: SCHED_FIFO, SCHED_RR, EDF","Priority inversion and inheritance","CPU affinity: sched_setaffinity","Multicore load balancing","Context switch overhead"], actions:["Measure context switch time with perf","Set RT priority for a critical thread","Analyze scheduler behavior with trace-cmd"], gaps:["SCHED_DEADLINE and CBS","Per-CPU workqueue design","Scheduler tuning for mixed RT/BE workloads"] },
+      "Synchronization":{ mastery:55, subtopics:["Mutex, spinlock, RW lock semantics","Condition variables: wait/signal/broadcast","Deadlock: MHCC conditions, banker's algo","Atomic operations and memory order","Lock-free data structures","Semaphore vs mutex trade-offs"], actions:["Implement a lock-free ring buffer","Write a producer-consumer with condvar","Detect deadlocks with Helgrind"], gaps:["C++ memory_order in practice","RCU read-copy-update deep usage","Wait-free algorithms"] },
+      "Memory management":{ mastery:40, subtopics:["Page tables: 4-level on x86_64","TLB shootdown on multicore","Buddy system and slab allocator","Page replacement: LRU clock","Huge pages: THP and manual","OOM killer scoring"], actions:["Map /proc/buddyinfo during stress test","Tune THP for a memory-intensive app","Write a simple slab allocator in userspace"], gaps:["NUMA memory policy in applications","Memory compaction internals","CXL memory tiering"] }
+    }
+  },
+  protocols:{ label:"Protocols", color:"#854F0B",
+    topics:{
+      "CAN & SocketCAN":{ mastery:60, subtopics:["CAN 2.0A/B frame format","CAN FD: faster data phase","Bit timing and synchronization","Error frames and bus-off recovery","SocketCAN: ip link, cansend, candump","J1939 for commercial vehicles","CANopen protocol stack"], actions:["Set up SocketCAN on Linux and send frames","Implement a CAN logger with candump","Write a CAN FD transmitter in C"], gaps:["CAN intrusion detection systems","CANopen master node implementation","Time-triggered CAN scheduling"] },
+      "UDS & Automotive":{ mastery:45, subtopics:["UDS services: 0x10, 0x11, 0x22, 0x27, 0x2E, 0x3E","Session types: default, programming, extended","Security access: seed/key mechanism","DTC storage and freeze frame","DoIP (ISO 13400) over Ethernet","XCP for calibration"], actions:["Implement a UDS tester in Python","Set up DoIP with a virtual ECU","Write a DTC reader for OBD-II PIDs"], gaps:["Full UDS server implementation","Flash programming sequence (0x34/0x36/0x37)","AUTOSAR DCM configuration"] },
+      "I2C / SPI / UART":{ mastery:65, subtopics:["I2C: clock stretching, arbitration","I2C multi-master, 10-bit addressing","SPI: CPOL/CPHA modes, CS management","UART: termios, baud, flow control","RS-485 half-duplex driver enable","i2c-tools: i2cdetect, i2cdump"], actions:["Debug I2C with logic analyzer","Write SPI full-duplex driver with DMA","Set up RS-485 communication with termios"], gaps:["I3C bus migration from I2C","SPI performance optimization with DMA","Complex I2C bus mux topologies"] }
+    }
+  },
+  c:{ label:"C", color:"#E24B4A",
+    topics:{
+      "Memory & Pointers":{ mastery:60, subtopics:["Stack vs heap allocation patterns","Pointer arithmetic and array decay","void* and function pointer patterns","const correctness","Memory layout of a program","Common bugs: use-after-free, double-free","valgrind memcheck workflow"], actions:["Implement a generic linked list with void*","Write a memory pool allocator","Find all leaks in a codebase with valgrind"], gaps:["Custom allocator with alignment","Lock-free memory reclamation (epoch-based)"] },
+      "Multithreading (POSIX)":{ mastery:45, subtopics:["pthread_create/join/detach","Mutex: init/lock/unlock lifecycle","Condition variables: wait/signal","Race conditions and happens-before","Thread-local storage: __thread","Producer-consumer patterns"], actions:["Implement a thread-safe ring buffer","Write producer-consumer with mutex+condvar","Use TSan to find a race condition"], gaps:["POSIX barriers and use cases","Priority inheritance mutex"] },
+      "IPC":{ mastery:40, subtopics:["Pipes: anonymous and named FIFO","POSIX message queues","Shared memory with mmap + semaphore","Unix domain sockets","Signals as async notification","D-Bus basics"], actions:["Build a shared-memory IPC benchmark","Implement request-reply with Unix sockets","Measure pipe vs socket latency"], gaps:["io_uring for high-performance async I/O","Memfd for anonymous shared memory"] },
+      "Optimization":{ mastery:35, subtopics:["Compiler flags: O0/O1/O2/O3/Os","Cache-friendly data layout: SoA vs AoS","Branch prediction: __builtin_expect","Restrict keyword for aliasing","Profiling with perf and gprof","Inline and always_inline"], actions:["Profile a tight loop and eliminate cache misses","Rewrite AoS to SoA and benchmark","Measure branch misprediction with perf stat"], gaps:["Link-time optimization (LTO)","Profile-guided optimization (PGO)","SIMD intrinsics in C"] }
+    }
+  },
+  cpp:{ label:"C++", color:"#185FA5",
+    topics:{
+      "Modern C++ (11/14/17/20)":{ mastery:50, subtopics:["Move semantics: rvalue refs, std::move","Perfect forwarding: std::forward","Lambda: captures, mutable, generic","std::optional, std::variant, std::any","Structured bindings (C++17)","Concepts and requires (C++20)","Coroutines: co_await, co_yield (C++20)"], actions:["Rewrite a function using move semantics","Implement a visitor pattern with std::variant","Write a range adaptor with C++20 ranges"], gaps:["Modules (C++20) in real projects","Coroutines with Awaitable types"] },
+      "Concurrency":{ mastery:45, subtopics:["std::thread, jthread (C++20)","std::mutex, lock_guard, unique_lock","std::condition_variable: wait/notify","std::atomic: memory_order semantics","std::future, std::promise, std::async","Lock-free queue implementation"], actions:["Implement a thread pool with work stealing","Write a lock-free SPSC queue","Measure contention with perf lock analysis"], gaps:["std::execution (C++26 senders/receivers)","Hazard pointers for lock-free memory"] },
+      "Templates & Metaprogramming":{ mastery:35, subtopics:["Function and class templates","Variadic templates: sizeof...","SFINAE: enable_if, void_t","Concepts (C++20) for cleaner SFINAE","constexpr if (C++17)","Type traits: is_same, conditional","CRTP pattern"], actions:["Write a generic type-safe event system","Implement CRTP for static polymorphism","Use concepts to constrain a template algorithm"], gaps:["Template metaprogramming for compile-time tables","Expression templates for lazy evaluation"] }
+    }
+  },
+  rust:{ label:"Rust", color:"#854F0B",
+    topics:{
+      "Ownership & Borrowing":{ mastery:30, subtopics:["Ownership rules and move semantics","Borrowing: & shared vs &mut exclusive","Lifetime annotations: 'a syntax","Lifetime elision rules","Clone vs Copy traits","Box<T>, Rc<T>, Arc<T>","Interior mutability: RefCell, Mutex"], actions:["Fix a borrow checker error without cloning","Implement a linked list using Box<T>","Write a multi-threaded counter with Arc<Mutex<T>>"], gaps:["Complex lifetime bounds in traits","Pin<T> and Unpin for async","Self-referential structs"] },
+      "Async/Await":{ mastery:15, subtopics:["Future trait and poll model","async fn and .await syntax","Tokio runtime: spawn, select!","Channels: mpsc, oneshot, broadcast","Streams as async iterators","Pin and the async pinning model"], actions:["Build a TCP server with Tokio","Implement a task queue with async channels","Write a select! macro for timeout handling"], gaps:["Custom Future implementations","Structured concurrency patterns","async-std vs Tokio trade-offs"] },
+      "Embedded Rust":{ mastery:10, subtopics:["no_std environment","embedded-hal traits","RTIC framework for interrupt-driven concurrency","SVD2Rust PAC generation","HAL crates: stm32, nrf, rp2040","defmt for efficient logging","probe-rs for flashing/debugging"], actions:["Blink an LED on RP2040 in Rust","Use embedded-hal I2C to talk to a sensor","Set up probe-rs for debugging"], gaps:["RTIC task priorities and resource sharing","Async on embedded: Embassy framework","Custom linker script for no_std"] }
+    }
+  },
+  qt:{ label:"Qt & HMI", color:"#534AB7",
+    topics:{
+      "Qt Core & Widgets":{ mastery:45, subtopics:["QObject, Q_OBJECT, meta-object system","Signals/slots: connect() function pointer syntax","Memory management: parent-child ownership","Event loop: QCoreApplication::exec()","QMainWindow, layouts, common widgets","Model-View: QAbstractItemModel","Custom painting: QPainter"], actions:["Build a live data dashboard with QCharts","Implement a custom QAbstractTableModel","Use QThread with moveToThread for background work"], gaps:["Qt test framework for unit testing UI","Accessibility in Qt Widgets"] },
+      "Qt QML & Quick":{ mastery:25, subtopics:["QML syntax: properties, bindings, signals","Qt Quick Controls 2: Button, ListView, StackView","States, transitions, animations","Q_PROPERTY to expose C++ to QML","QAbstractListModel in QML","qmlRegisterType, singletons","EGLFS platform plugin for embedded"], actions:["Build a telemetry dashboard in QML","Expose a C++ sensor data model to QML","Run a QML app on embedded Linux with EGLFS"], gaps:["QML performance profiling","Shader effects in Qt Quick","Qt for MCU (ultra-embedded)"] },
+      "Qt + ROS2":{ mastery:20, subtopics:["Qt node in a ROS2 package","Spinning ROS2 executor in QThread","Bridging ROS2 callbacks to Qt signals","rviz2 plugin development","rqt plugin development","QML dashboard for robot telemetry"], actions:["Create a Qt window subscribing to a ROS2 topic","Display robot position on a QML map","Write a custom rviz2 display plugin"], gaps:["Thread-safe ROS2/Qt callback bridge patterns","Lifecycle node integration with Qt UI"] }
+    }
+  },
+  nvidia:{ label:"NVIDIA / CUDA", color:"#1D9E75",
+    topics:{
+      "CUDA fundamentals":{ mastery:20, subtopics:["Thread hierarchy: thread, warp, block, grid","Kernel launch: <<<grid, block, smem>>>","Memory types: global, shared, constant, registers","Warp divergence and its cost","Occupancy: register/smem trade-offs","CUDA streams for concurrency","Unified Memory: cudaMallocManaged"], actions:["Write a vector add kernel and profile it","Implement matrix multiply with shared memory tiling","Use cuda-memcheck to find memory errors"], gaps:["Cooperative groups for fine-grained sync","CUDA graphs for launch overhead reduction","Multi-GPU with NCCL"] },
+      "TensorRT":{ mastery:15, subtopics:["ONNX to engine workflow","Layer fusion and precision calibration","FP16 and INT8 inference","Dynamic shapes and optimization profiles","Plugin API for custom layers","trtexec command line tool","Engine serialization and caching"], actions:["Export YOLOv8 to ONNX and convert to TRT engine","Run INT8 calibration with a real dataset","Write a custom TRT plugin for a non-standard op"], gaps:["TRT profiling with Nsight Systems","Handling dynamic batch sizes efficiently","Plugin API v3 migration"] },
+      "DeepStream":{ mastery:15, subtopics:["GStreamer-based pipeline architecture","nvstreammux, nvinfer, nvtracker plugins","NvDsObjectMeta and NvDsFrameMeta","Multi-camera batched inference","deepstream-python-apps","Custom plugin development","Cloud messaging: Kafka, MQTT sink"], actions:["Build a 4-camera detection pipeline","Add object tracking to an nvinfer pipeline","Write a Python probe function to extract metadata"], gaps:["Custom nvdsanalytics plugin","DeepStream + Triton Inference Server","Cross-stream ROI analysis"] }
+    }
+  },
+  gpu:{ label:"GPU", color:"#7F77DD",
+    topics:{
+      "GPU architecture":{ mastery:20, subtopics:["SIMT vs SIMD execution model","SM / CU architecture: warps, wavefronts","Register file and occupancy","L1/L2 cache and GDDR/HBM bandwidth","Tensor cores (Volta+)","PCIe vs NVLink bandwidth","GPU memory hierarchy"], actions:["Measure GPU memory bandwidth with bandwidthTest","Profile SM occupancy with Nsight Compute","Compare PCIe and NVLink bandwidth"], gaps:["RT core programming","Hardware scheduling across multiple streams","Ampere/Hopper architecture specifics"] },
+      "Vulkan compute":{ mastery:10, subtopics:["Vulkan instance, device, queue families","Command buffers and compute pipeline","Descriptor sets for buffer binding","Push constants for small data","Synchronization: barriers, fences, semaphores","SPIR-V shader compilation","VMA (Vulkan Memory Allocator)"], actions:["Write a Vulkan compute shader for image processing","Use VMA for buffer allocation","Benchmark Vulkan compute vs OpenCL"], gaps:["Vulkan video decode extension","Timeline semaphores for complex sync","Vulkan ray tracing pipeline"] }
+    }
+  },
+  multimedia:{ label:"Multimedia", color:"#D4537E",
+    topics:{
+      "V4L2 capture":{ mastery:55, subtopics:["VIDIOC_QUERYCAP, S_FMT, G_FMT","Buffer management: REQBUFS, QBUF, DQBUF","Streaming I/O: mmap, userptr, dmabuf","Pixel formats: YUYV, NV12, MJPEG, H264","V4L2 controls: brightness, exposure, WB","Media controller framework","Sub-device API for ISP control"], actions:["Write a V4L2 capture loop using mmap","Set exposure via V4L2 control","Chain V4L2 with GStreamer using dmabuf zero-copy"], gaps:["Media controller pipeline configuration","V4L2 M2M codec for hardware encoding","ISP sub-device tuning automation"] },
+      "GStreamer pipelines":{ mastery:60, subtopics:["Elements, pads, caps, buffers","GST_DEBUG and pipeline visualization","Appsrc and appsink integration","Dynamic pipeline: tee, queue, valve","Caps negotiation and renegotiation","NVIDIA GStreamer plugins: nvdec, nvenc","Python GStreamer: gi.repository.Gst"], actions:["Build a camera to RTSP server pipeline","Add an appsink to extract frames for OpenCV","Write a Python GStreamer app with custom processing"], gaps:["GStreamer buffer pool sharing with CUDA","Custom GStreamer element in C","GStreamer buffer metadata for AI results"] },
+      "OpenCV & AI integration":{ mastery:50, subtopics:["Mat: channels, depth, ROI","Camera calibration: findChessboardCorners","Stereo vision: stereoCalibrate, disparity","DNN module: readNetFromONNX, forward","Optical flow: Lucas-Kanade","Feature matching: ORB + BFMatcher","Zero-copy: DMA-BUF to CUDA"], actions:["Calibrate a stereo camera pair","Run ONNX inference through cv2.dnn","Implement optical flow tracking on video"], gaps:["OpenCV CUDA module for GPU acceleration","Custom DNN backend for TensorRT","GPU-accelerated stereo matching"] }
+    }
+  },
+  ros2:{ label:"ROS2", color:"#534AB7",
+    topics:{
+      "Core architecture":{ mastery:60, subtopics:["DDS and RMW abstraction","QoS: reliability, durability, deadline, liveliness","Lifecycle nodes: configure, activate, deactivate","Executors: SingleThreaded, MultiThreaded","Callback groups: Reentrant vs MutuallyExclusive","Intra-process communication (zero-copy)","Composable nodes and component containers"], actions:["Profile a ROS2 node with ros2 trace","Convert a node to lifecycle node","Move a compute-heavy node to composable container"], gaps:["Custom RMW implementation","Real-time executor with SCHED_FIFO","ROS2 security (SROS2) configuration"] },
+      "TF2 transforms":{ mastery:55, subtopics:["Transform tree: parent/child frames","Static vs dynamic transforms","TransformBroadcaster, StaticTransformBroadcaster","lookupTransform with timeout","tf2::doTransform for geometry msgs","Debugging: tf2_echo, view_frames, rqt_tf_tree","Common frames: map, odom, base_link"], actions:["Visualize full TF tree for a robot","Find and fix a TF timestamp mismatch","Implement URDF-based TF broadcast"], gaps:["Time travel queries for sensor fusion","Multi-robot TF namespace management"] },
+      "Nav2 & SLAM":{ mastery:45, subtopics:["Nav2 architecture: planner, controller, BT","Costmaps: inflation, static, obstacle layers","Global planner: Smac Hybrid-A*","Local planner: Regulated Pure Pursuit","slam_toolbox: online async mapping","AMCL localization","Behavior Tree navigator"], actions:["Tune inflation radius for tight navigation","Replace DWB with RPP controller","Run slam_toolbox and save a map"], gaps:["Custom BT navigator plugin","SLAM with 3D LiDAR (LIO-SAM)","Multi-floor navigation"] }
+    }
+  },
+  robotics:{ label:"Robotics", color:"#D4537E",
+    topics:{
+      "Kinematics & Dynamics":{ mastery:35, subtopics:["DH parameters for FK","Jacobian: geometric and analytical","IK: analytical and numerical","Newton-Euler dynamics formulation","Inertia tensor computation","Singularity detection and avoidance","URDF robot description"], actions:["Compute FK for a 6-DOF arm","Implement numerical IK with Jacobian pseudoinverse","Visualize a URDF in RViz2"], gaps:["Lagrange-Euler dynamics for control","Screw theory approach","Deformable body simulation"] },
+      "State estimation":{ mastery:30, subtopics:["Kalman Filter: predict and update","EKF for nonlinear systems","UKF sigma points","IMU noise model: white noise, random walk","IMU + odometry fusion","robot_localization EKF node","Factor graphs: GTSAM basics"], actions:["Run robot_localization with IMU + odom","Implement 1D KF in Python","Visualize covariance ellipses in RViz"], gaps:["IMU preintegration on manifold","Graph SLAM with GTSAM","Visual-inertial initialization"] },
+      "Path planning":{ mastery:40, subtopics:["Dijkstra and A* on grid maps","RRT and RRT* sampling","DWA local planning","TEB elastic band","MPPI stochastic control","Behavior trees for task planning","Global costmap design"], actions:["Implement A* on an occupancy grid","Tune DWA for a differential drive robot","Design a BT for a pick-and-place task"], gaps:["MPPI implementation from scratch","Coverage path planning for inspection","Multi-robot coordinated planning"] }
+    }
+  },
+  ai:{ label:"AI / Vision", color:"#BA7517",
+    topics:{
+      "Object detection":{ mastery:55, subtopics:["YOLO family: v5, v8, v10, World","Anchor-free vs anchor-based","Focal loss and RetinaNet","NMS and Soft-NMS","mAP evaluation: IoU thresholds","Small object detection techniques","ONNX export and runtime"], actions:["Fine-tune YOLOv8 on a custom dataset","Export to ONNX and run with OpenCV DNN","Implement custom NMS in C++"], gaps:["Real-time detection on Jetson with TRT","YOLO-World for open-set detection","Multi-label detection architectures"] },
+      "Tracking":{ mastery:40, subtopics:["SORT: Kalman filter + Hungarian matching","DeepSORT: Re-ID feature extraction","ByteTrack: low-confidence recovery","OC-SORT improvements","MOT metrics: MOTA, IDF1, HOTA","Camera handoff and zone tracking","Re-ID model training"], actions:["Run ByteTrack on a traffic video","Evaluate MOTA/HOTA on MOT17 dataset","Integrate tracker into a ROS2 pipeline"], gaps:["Online Re-ID adaptation","Occlusion handling strategies","Multi-camera tracking fusion"] },
+      "Model deployment":{ mastery:35, subtopics:["TensorRT INT8 calibration pipeline","Dynamic shapes and multiple profiles","ONNX Runtime optimization","RKNN Toolkit for Rockchip NPU","OpenVINO for Intel","Quantization-aware training (QAT)","Latency vs accuracy tradeoff analysis"], actions:["Run TRT INT8 with custom calibrator","Benchmark TRT vs ONNX Runtime","Export to RKNN and run on RK3588"], gaps:["SNPE for Qualcomm DSP/NPU","Model pruning before quantization","Post-training quantization for transformers"] }
+    }
+  },
+  automotive:{ label:"Automotive", color:"#A32D2D",
+    topics:{
+      "Diagnostics (UDS/OBD)":{ mastery:50, subtopics:["OBD-II PIDs and Mode 01-09","UDS sessions: default, programming, extended","Security access: seed/key 0x27","DTC: storage, freeze frame, extended data","ReadDataByIdentifier 0x22","WriteDataByIdentifier 0x2E","ECUReset 0x11"], actions:["Write a Python UDS client (udsoncan)","Read live PIDs with OBD-II ELM327","Simulate a UDS server for testing"], gaps:["Full flash programming sequence","Bootloader-level security (test only)","DTC snapshot triggers and conditions"] },
+      "AUTOSAR":{ mastery:20, subtopics:["Classic AUTOSAR layers: BSW, RTE, SWC","AUTOSAR OS: tasks, alarms, events","RTE port/interface design","ARXML configuration format","Adaptive AUTOSAR ara::com","SOME/IP service discovery","Execution and communication managers"], actions:["Trace AUTOSAR OS task schedule","Configure a SOME/IP service with vsomeip","Read ARXML and understand SW component design"], gaps:["Adaptive AUTOSAR platform bring-up","AUTOSAR Crypto stack","E2E protection for safety-critical signals"] },
+      "ISO 26262":{ mastery:15, subtopics:["Safety lifecycle phases","HARA: hazard analysis and risk assessment","ASIL A/B/C/D determination","Safety goals and safety requirements","ASIL decomposition","MISRA-C for software safety","Hardware safety mechanisms: ECC, watchdog"], actions:["Conduct a HARA for a simple ECU","Identify ASIL levels for a camera system","Apply MISRA-C rules with cppcheck"], gaps:["Full FuSa workflow from concept to V&V","Formal verification methods","SOTIF (ISO 21448) for autonomous systems"] }
+    }
+  },
+  networking:{ label:"Networking", color:"#0F6E56",
+    topics:{
+      "TCP/IP & sockets":{ mastery:55, subtopics:["TCP 3-way handshake and teardown","TCP congestion control: slow start, CUBIC, BBR","epoll: edge vs level triggered","Non-blocking socket patterns","Unix domain sockets for IPC","TCP options: timestamps, SACK, NODELAY","Raw sockets for custom protocols"], actions:["Write a non-blocking TCP echo server with epoll","Benchmark TCP vs Unix socket latency","Implement a simple HTTP/1.1 server"], gaps:["io_uring for network I/O","QUIC/HTTP3 client implementation","DPDK for kernel-bypass networking"] },
+      "Embedded networking":{ mastery:35, subtopics:["lwIP raw/callback API","lwIP thread model and pitfalls","Wi-Fi: station, AP, WPA3","MQTT over embedded: mosquitto, wolfMQTT","BLE GAP/GATT for IoT","LoRaWAN: ADR, spreading factor","CoAP for constrained devices"], actions:["Connect ESP32 via MQTT to a broker","Implement a lwIP TCP client","Set up BLE GATT server on Linux"], gaps:["lwIP performance tuning for high throughput","Thread-safe lwIP API migration","MQTT 5.0 features"] },
+      "Network tools":{ mastery:60, subtopics:["Wireshark: filters, protocol dissectors","tcpdump one-liners","ss, netstat for connection state","iperf3 for throughput testing","nmap for port scanning","ethtool for NIC statistics","eBPF/XDP: fast packet processing"], actions:["Capture and analyze a TLS handshake in Wireshark","Write a bpftrace script to count packets by port","Benchmark network throughput with iperf3"], gaps:["XDP program for load balancing","P4 programmable data planes","eBPF-based firewall"] }
+    }
+  },
+  security:{ label:"Security", color:"#993556",
+    topics:{
+      "Linux security":{ mastery:30, subtopics:["Capabilities: CAP_NET_ADMIN, CAP_SYS_PTRACE","seccomp: BPF filter for syscall restriction","SELinux: type enforcement policies","AppArmor: profile confinement","Kernel hardening: KASLR, SMEP, SMAP","Audit framework: auditd rules","Namespace isolation for containers"], actions:["Write a seccomp filter for a service","Confine an app with an AppArmor profile","Audit file access with auditd"], gaps:["SELinux policy module development","eBPF for security monitoring","KRSI (kernel runtime security instrumentation)"] },
+      "Embedded & secure boot":{ mastery:25, subtopics:["Chain of trust: ROM to SPL to U-Boot to Kernel","U-Boot FIT image signing with RSA","ARM TrustZone: normal vs secure world","OP-TEE: trusted app development","HSM and TPM 2.0 integration","RPMB for secure storage","eFuse programming"], actions:["Enable U-Boot verified boot on a board","Write a minimal OP-TEE trusted application","Provision a TPM and seal a key"], gaps:["OP-TEE attestation flow","TEE-based key management for OTA","Secure enclave for ML model protection"] },
+      "Cryptography":{ mastery:35, subtopics:["AES-128/256 symmetric encryption","RSA and ECC asymmetric operations","SHA-256/SHA-3 hash functions","HMAC and digital signatures","TLS 1.3 handshake internals","PKI: CA, certificates, revocation","OpenSSL CLI: genrsa, req, x509, s_client"], actions:["Implement AES-GCM encryption with libsodium","Set up mTLS between two services","Generate and sign a certificate with OpenSSL"], gaps:["Side-channel resistant cryptography","Post-quantum cryptography algorithms","Hardware-accelerated crypto on SoCs"] }
+    }
+  },
+  hardware:{ label:"Hardware Platforms", color:"#888780",
+    topics:{
+      "i.MX95 & NXP":{ mastery:40, subtopics:["i.MX95: A55 + M33 + GPU + NPU","Boot flow: BootROM to SPL to U-Boot to Kernel","SCMI for power/clock/reset control","meta-imx Yocto layer","DDR stress test and training","MIPI-CSI2 camera bring-up","FlexSPI, eMMC, SD boot selection"], actions:["Bring up a new peripheral on i.MX95 EVK","Configure SCMI clocks from Linux","Run DDR stress test during board validation"], gaps:["i.MX95 NPU acceleration with eIQ","EdgeLock secure enclave integration","Multi-display with LCDIF and MIPI-DSI"] },
+      "Jetson platforms":{ mastery:45, subtopics:["Jetson product line: Nano, NX, AGX, Orin","JetPack SDK: CUDA, cuDNN, TRT, OpenCV","CSI camera bring-up with Argus API","Carrier board customization","jetson_clocks and nvpmodel power modes","ODMDATA hardware configuration","JTOP for real-time monitoring"], actions:["Profile a DeepStream pipeline on Jetson Orin","Configure a CSI camera with Argus on Jetson","Tune power mode for performance vs thermal"], gaps:["Custom carrier board PCB design","DLA (Deep Learning Accelerator) usage","MIPI-CSI2 ISP tuning on Jetson"] },
+      "Rockchip RK3588":{ mastery:25, subtopics:["RK3588: A76+A55 big.LITTLE + Mali-G610","RKNN Toolkit 2 for NPU inference","rkdeveloptool for flashing","meta-rockchip Yocto layer","Camera ISP on Rockchip","PCIe and USB3 on RK platforms"], actions:["Convert a YOLO model to RKNN format","Flash a custom image with rkdeveloptool","Benchmark NPU vs CPU inference on RK3588"], gaps:["RKNN server for multi-process inference","ISP custom tuning for RK camera","RK3588 power management from Linux"] }
+    }
+  }
+};
+
+const overview=[
+  {domain:"Linux",id:"linux",active:2,gaps:3,mastery:40,color:"#378ADD"},
+  {domain:"Embedded Linux",id:"embedded",active:3,gaps:2,mastery:38,color:"#639922"},
+  {domain:"Device Drivers",id:"drivers",active:1,gaps:2,mastery:38,color:"#D85A30"},
+  {domain:"ROS2",id:"ros2",active:2,gaps:2,mastery:53,color:"#534AB7"},
+  {domain:"Robotics",id:"robotics",active:1,gaps:3,mastery:35,color:"#D4537E"},
+  {domain:"AI / Vision",id:"ai",active:2,gaps:2,mastery:43,color:"#BA7517"},
+  {domain:"C",id:"c",active:1,gaps:2,mastery:45,color:"#E24B4A"},
+  {domain:"C++",id:"cpp",active:1,gaps:2,mastery:43,color:"#185FA5"},
+  {domain:"NVIDIA/CUDA",id:"nvidia",active:0,gaps:3,mastery:17,color:"#1D9E75"},
+  {domain:"Automotive",id:"automotive",active:1,gaps:3,mastery:28,color:"#A32D2D"},
+  {domain:"Multimedia",id:"multimedia",active:2,gaps:2,mastery:55,color:"#D4537E"},
+  {domain:"Protocols",id:"protocols",active:1,gaps:2,mastery:57,color:"#854F0B"}
+];
+
+function p(n){return Math.min(100,Math.max(0,Math.round(n)));}
+
+function renderOverview(){
+  let h=`<p style="font-size:13px;font-weight:600;color:#666;margin-bottom:12px">All domains — click any card to explore</p>`;
+  h+=`<div class="grid">`;
+  overview.forEach(d=>{
+    h+=`<div class="card" onclick="jump('${d.id}')">`;
+    h+=`<div class="card-name">${d.domain}</div>`;
+    h+=`<div class="card-meta">${d.active} active &nbsp;·&nbsp; ${d.gaps} gaps &nbsp;·&nbsp; ${d.mastery}% mastery</div>`;
+    h+=`<div class="bar"><div class="bar-fill" style="width:${d.mastery}%;background:${d.color}"></div></div>`;
+    h+=`</div>`;
+  });
+  h+=`</div>`;
+  h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">`;
+  h+=`<div class="info-card"><div class="info-title">Active this week</div>`;
+  ["ROS2 Navigation & TF2","SLAM / VINS","Embedded Linux BSP (i.MX95)","GStreamer + V4L2 Pipelines","Linux Kernel & Drivers","CAN Diagnostics & UDS"]
+    .forEach(f=>{ h+=`<div class="item"><span class="dot" style="background:#639922"></span><span>${f}</span></div>`; });
+  h+=`</div>`;
+  h+=`<div class="info-card"><div class="info-title">Gaps to close</div>`;
+  ["Linux Kernel Memory Internals","TensorRT INT8 Calibration","CUDA Optimization","ISO 26262 ASIL","AUTOSAR Adaptive","eBPF & TSN"]
+    .forEach(g=>{ h+=`<div class="item"><span class="dot" style="background:#E24B4A"></span><span>${g}</span></div>`; });
+  h+=`</div></div>`;
+  document.getElementById('content').innerHTML=h;
+}
+
+function jump(id){
+  document.getElementById('domSel').value=id;
+  onDomain();
+}
+
+function onDomain(){
+  const dom=document.getElementById('domSel').value;
+  const ts=document.getElementById('topicSel');
+  if(!dom){ts.disabled=true;ts.innerHTML='<option value="">Select domain first</option>';renderOverview();return;}
+  const d=DB[dom];
+  ts.disabled=false;
+  ts.innerHTML=`<option value="">All topics in ${d.label}</option>`;
+  Object.keys(d.topics).forEach(t=>{ts.innerHTML+=`<option value="${t}">${t}</option>`;});
+  renderDomain(dom);
+}
+
+function renderDomain(dom){
+  const d=DB[dom];
+  let h=`<p style="font-size:13px;font-weight:600;margin-bottom:12px;color:${d.color}">${d.label}</p>`;
+  h+=`<div class="grid">`;
+  Object.entries(d.topics).forEach(([name,t])=>{
+    const m=p(t.mastery);
+    h+=`<div class="card" onclick="pick('${name}')">`;
+    h+=`<div class="card-name">${name}</div>`;
+    h+=`<div class="card-meta">${t.subtopics.length} subtopics &nbsp;·&nbsp; ${t.gaps.length} gaps</div>`;
+    h+=`<div class="bar"><div class="bar-fill" style="width:${m}%;background:${d.color}"></div></div>`;
+    h+=`<div style="font-size:11px;color:#888;margin-top:4px">${m}% mastery</div>`;
+    h+=`</div>`;
+  });
+  h+=`</div>`;
+  document.getElementById('content').innerHTML=h;
+}
+
+function pick(name){
+  document.getElementById('topicSel').value=name;
+  onTopic();
+}
+
+function onTopic(){
+  const dom=document.getElementById('domSel').value;
+  const topic=document.getElementById('topicSel').value;
+  if(!dom){renderOverview();return;}
+  if(!topic){renderDomain(dom);return;}
+  const d=DB[dom]; const t=d.topics[topic];
+  if(!t){renderDomain(dom);return;}
+  const m=p(t.mastery);
+  let h=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">`;
+  h+=`<span style="font-size:16px;font-weight:600">${topic}</span>`;
+  h+=`<span class="badge" style="background:${d.color}18;color:${d.color};border:1px solid ${d.color}50">${m}% mastery</span>`;
+  h+=`</div>`;
+  h+=`<div class="master-bar"><div class="master-fill" style="width:${m}%;background:${d.color}"></div></div>`;
+  h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">`;
+  h+=`<div class="info-card"><div class="info-title">Subtopics</div>`;
+  t.subtopics.forEach(s=>{ h+=`<div class="item"><span class="dot" style="background:${d.color}"></span><span>${s}</span></div>`; });
+  h+=`</div>`;
+  h+=`<div class="info-card"><div class="info-title">Gaps to close</div>`;
+  t.gaps.forEach(g=>{ h+=`<div class="item"><span class="dot" style="background:#E24B4A"></span><span>${g}</span></div>`; });
+  h+=`</div></div>`;
+  h+=`<div class="actions-card"><div class="info-title">Actions — do these next</div>`;
+  t.actions.forEach((a,i)=>{ h+=`<div class="action-row"><span class="action-num">${i+1}</span><span style="flex:1">${a}</span></div>`; });
+  h+=`</div>`;
+  document.getElementById('content').innerHTML=h;
+}
+
+function reset(){
+  document.getElementById('domSel').value='';
+  document.getElementById('topicSel').value='';
+  document.getElementById('topicSel').disabled=true;
+  document.getElementById('topicSel').innerHTML='<option value="">Select domain first</option>';
+  renderOverview();
+}
+
+renderOverview();
+</script>
+</body>
+</html>
